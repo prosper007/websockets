@@ -3,6 +3,14 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import path from 'path';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
+import * as Polls from './controllers/poll_controller';
+
+// DB Setup
+const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost/cs52poll';
+mongoose.connect(mongoURI, { useNewUrlParser: true });
+// set mongoose promises to es6 default
+mongoose.Promise = global.Promise;
 
 // initialize
 const app = express();
@@ -30,8 +38,33 @@ app.use(bodyParser.json());
 
 // default index route
 app.get('/', (req, res) => {
-  res.send('hi');
+  Polls.getPolls().then((polls) => {
+    res.render('index', { polls });
+  }).catch((error) => {
+    res.send(`error: ${error}`);
+  });
 });
+
+app.get('/new', (req, res) => {
+  res.render('new');
+})
+
+app.post('/new', (req, res) => {
+  const newpoll = {
+    text: req.body.text,
+    imageURL: req.body.imageURL,
+  };
+  Polls.createPoll(newpoll).then((poll) => {
+    res.redirect('/');
+  });
+})
+
+app.post('/vote/:id', (req, res) => {
+  const vote = (req.body.vote === 'up');// convert to bool
+  Polls.vote(req.params.id, vote).then((result) => {
+    res.send(result);
+  });
+})
 
 // START THE SERVER
 // =============================================================================
